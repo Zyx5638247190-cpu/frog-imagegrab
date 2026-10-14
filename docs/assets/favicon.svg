@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- v™Öþ faviconÄr4v™ -->
+  <defs>
+    <linearGradient id="b" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFE082" />
+      <stop offset="1" stop-color="#FFB300" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="14" fill="#FFF8E1" />
+  <path d="M22 17 L19.5 8 L28 13.5 Z" fill="#FF8F00" />
+  <path d="M42 17 L44.5 8 L36 13.5 Z" fill="#FF8F00" />
+  <ellipse cx="32" cy="36" rx="21" ry="19" fill="url(#b)" stroke="#F9A825" stroke-width="2" />
+  <ellipse cx="32" cy="45" rx="12" ry="8.5" fill="#FFF8E1" opacity="0.9" />
+  <ellipse cx="24" cy="30" rx="5.4" ry="6" fill="#FFFFFF" />
+  <ellipse cx="41" cy="30" rx="5.4" ry="6" fill="#FFFFFF" />
+  <circle cx="25" cy="31" r="3" fill="#4E342E" />
+  <circle cx="42" cy="31" r="3" fill="#4E342E" />
+  <circle cx="26.2" cy="29.4" r="1" fill="#FFFFFF" />
+  <circle cx="43.2" cy="29.4" r="1" fill="#FFFFFF" />
+  <path d="M28 40.5 Q32.5 45 37 40.5" fill="none" stroke="#6D4C41" stroke-width="2" stroke-linecap="round" />
+</svg>

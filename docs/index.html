@@ -1,0 +1,791 @@
+<!DOCTYPE html>
+<html lang="zh-CN" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>奶龙取图 DragonGrab · 嗷！一键提取电商详情页所有图片</title>
+  <meta name="description" content="奶龙取图（DragonGrab）是一款免费的 Chrome 插件，一键提取淘宝、天猫、京东、拼多多商家版商品详情页的所有图片，自动过滤、统一转 PNG、批量下载、ZIP 打包。嗷！" />
+  <meta name="theme-color" content="#FFCA28" />
+  <meta property="og:title" content="奶龙取图 DragonGrab · 电商图片一键提取下载" />
+  <meta property="og:description" content="嗷！一键提取电商详情页所有图片，自动过滤、统一转 PNG、批量下载。" />
+  <meta property="og:image" content="assets/favicon.svg" />
+  <link rel="icon" type="image/svg+xml" href="assets/favicon.svg" />
+  <link rel="stylesheet" href="css/style.css" />
+
+  <!-- 尽早标记 JS 可用 + 套用已保存的主题，避免首屏内容闪一下和深色模式闪白 -->
+  <script>
+    (function () {
+      var root = document.documentElement;
+      root.classList.add('js');
+      try {
+        var saved = localStorage.getItem('dg-theme');
+        var dark = saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        root.setAttribute('data-theme', dark ? 'dark' : 'light');
+      } catch (e) { /* 隐私模式下读取会报错，用默认浅色即可 */ }
+    })();
+  </script>
+</head>
+<body>
+  <a class="skip-link" href="#hero">跳到主要内容</a>
+
+  <!-- ==================================================================
+       SVG 素材库（sprite）：奶龙吉祥物 + 全部图标
+       用 <use href="#id"> 引用，避免重复代码，也不依赖外部图片文件
+       ================================================================== -->
+  <svg class="sprite" aria-hidden="true" focusable="false" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+      <!-- 奶龙身体渐变 -->
+      <linearGradient id="dBody" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#FFE082" />
+        <stop offset="1" stop-color="#FFB300" />
+      </linearGradient>
+      <linearGradient id="dBodyDark" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0" stop-color="#FFD54F" />
+        <stop offset="1" stop-color="#FF9800" />
+      </linearGradient>
+    </defs>
+
+    <!-- 黄色小奶龙：圆滚滚的头 + 小角 + 大眼睛 + 微笑 + 尾巴 -->
+    <symbol id="dragon" viewBox="0 0 64 64">
+      <path d="M13 47 C3 47 5 34 14 35" fill="none" stroke="#FFB300" stroke-width="5" stroke-linecap="round" />
+      <path d="M22 17 L19.5 8 L28 13.5 Z" fill="#FF8F00" />
+      <path d="M42 17 L44.5 8 L36 13.5 Z" fill="#FF8F00" />
+      <ellipse cx="32" cy="36" rx="22" ry="20" fill="url(#dBody)" stroke="#F9A825" stroke-width="2" />
+      <ellipse cx="32" cy="45" rx="13" ry="9.5" fill="#FFF8E1" opacity="0.9" />
+      <ellipse cx="24" cy="30" rx="5.6" ry="6.2" fill="#FFFFFF" />
+      <ellipse cx="41" cy="30" rx="5.6" ry="6.2" fill="#FFFFFF" />
+      <circle cx="25" cy="31" r="3.1" fill="#4E342E" />
+      <circle cx="42" cy="31" r="3.1" fill="#4E342E" />
+      <circle cx="26.2" cy="29.4" r="1.1" fill="#FFFFFF" />
+      <circle cx="43.2" cy="29.4" r="1.1" fill="#FFFFFF" />
+      <ellipse cx="15" cy="39" rx="4" ry="2.6" fill="#FFAB91" opacity="0.75" />
+      <ellipse cx="49" cy="39" rx="4" ry="2.6" fill="#FFAB91" opacity="0.75" />
+      <path d="M28 40.5 Q32.5 45 37 40.5" fill="none" stroke="#6D4C41" stroke-width="2" stroke-linecap="round" />
+    </symbol>
+
+    <!-- 奶龙的头像（评价区 / 小徽章用，更简洁） -->
+    <symbol id="dragon-face" viewBox="0 0 64 64">
+      <ellipse cx="32" cy="34" rx="24" ry="22" fill="url(#dBodyDark)" stroke="#F9A825" stroke-width="2" />
+      <path d="M21 14 L18 5 L27 11 Z" fill="#FF8F00" />
+      <path d="M43 14 L46 5 L37 11 Z" fill="#FF8F00" />
+      <ellipse cx="24" cy="30" rx="6" ry="6.6" fill="#FFFFFF" />
+      <ellipse cx="41" cy="30" rx="6" ry="6.6" fill="#FFFFFF" />
+      <circle cx="25" cy="31" r="3.2" fill="#4E342E" />
+      <circle cx="42" cy="31" r="3.2" fill="#4E342E" />
+      <path d="M27 41 Q32.5 46 38 41" fill="none" stroke="#6D4C41" stroke-width="2.2" stroke-linecap="round" />
+    </symbol>
+
+    <!-- ---------- 线框图标（统一 24x24，颜色跟随文字） ---------- -->
+    <symbol id="i-time" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.2" /><path d="M12 7.4v5l3.2 1.9" /></symbol>
+    <symbol id="i-filter" viewBox="0 0 24 24"><path d="M3.5 5h17l-6.6 7.8v5.3l-3.8 2v-7.3z" /></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="2" /><rect x="13.5" y="3.5" width="7" height="7" rx="2" /><rect x="3.5" y="13.5" width="7" height="7" rx="2" /><rect x="13.5" y="13.5" width="7" height="7" rx="2" /></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M4.5 12.6l4.8 4.8L19.5 7.2" /></symbol>
+    <symbol id="i-cancel" viewBox="0 0 24 24"><path d="M6.5 6.5l11 11M17.5 6.5l-11 11" /></symbol>
+    <symbol id="i-image" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="3" /><circle cx="8.6" cy="9.6" r="1.7" /><path d="M4 17l4.8-4.4 3.4 3 3-2.6L20 17" /></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3.6v11.2M7.6 10.6L12 15l4.4-4.4M4.5 19.5h15" /></symbol>
+    <symbol id="i-expand" viewBox="0 0 24 24"><path d="M9.5 4.5H4.5v5M14.5 19.5h5v-5M19.5 9.5v-5h-5M4.5 14.5v5h5" /><path d="M9.5 9.5l-5-5M14.5 14.5l5 5" /></symbol>
+    <symbol id="i-slider" viewBox="0 0 24 24"><path d="M3.5 8.5h7M15.5 8.5h5M3.5 15.5h3M11.5 15.5h9" /><circle cx="13" cy="8.5" r="2.4" /><circle cx="8.5" cy="15.5" r="2.4" /></symbol>
+    <symbol id="i-zip" viewBox="0 0 24 24"><path d="M4.5 7.5h15v11a2 2 0 01-2 2h-11a2 2 0 01-2-2z" /><path d="M4.5 7.5l1.8-3.5h11.4l1.8 3.5M12 10.5v4" /></symbol>
+    <symbol id="i-tags" viewBox="0 0 24 24"><path d="M20.5 12.3l-8.2 8.2a1.8 1.8 0 01-2.5 0l-6.3-6.3a1.8 1.8 0 010-2.5l8.2-8.2h8.8z" /><circle cx="16.2" cy="7.8" r="1.4" /></symbol>
+    <symbol id="i-link" viewBox="0 0 24 24"><path d="M10.2 13.8a4.6 4.6 0 006.5 0l2.3-2.3a4.6 4.6 0 00-6.5-6.5l-1 1" /><path d="M13.8 10.2a4.6 4.6 0 00-6.5 0l-2.3 2.3a4.6 4.6 0 006.5 6.5l1-1" /></symbol>
+    <symbol id="i-csv" viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="3" /><path d="M3.5 9.5h17M9.5 9.5v10M15.5 9.5v10" /></symbol>
+    <symbol id="i-copy" viewBox="0 0 24 24"><rect x="8.5" y="8.5" width="12" height="12" rx="3" /><path d="M15.5 5.5H6a2 2 0 00-2 2v8.5" /></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4.2" /><path d="M12 2.6v2.6M12 18.8v2.6M2.6 12h2.6M18.8 12h2.6M5.4 5.4l1.9 1.9M16.7 16.7l1.9 1.9M18.6 5.4l-1.9 1.9M7.3 16.7l-1.9 1.9" /></symbol>
+    <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20.4 14.6A8.6 8.6 0 0110 4.2 8.6 8.6 0 1020.4 14.6z" /></symbol>
+    <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16" /></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18" /></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="M6.5 9.5l5.5 5.5 5.5-5.5" /></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 3.6l2.6 5.4 5.9.8-4.3 4.1 1 5.9-5.2-2.8-5.2 2.8 1-5.9L3.5 9.8l5.9-.8z" fill="currentColor" stroke="none" /></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4.5 12h14M13 6.5l5.5 5.5L13 17.5" /></symbol>
+    <symbol id="i-github" viewBox="0 0 24 24"><path d="M12 2.8a9.2 9.2 0 00-2.9 17.9c.46.09.63-.2.63-.44v-1.7c-2.56.56-3.1-1.08-3.1-1.08-.42-1.07-1.03-1.35-1.03-1.35-.84-.58.06-.57.06-.57.93.07 1.42.96 1.42.96.83 1.42 2.17 1.01 2.7.77.08-.6.32-1.01.59-1.24-2.05-.23-4.2-1.02-4.2-4.55 0-1 .36-1.83.95-2.47-.1-.23-.41-1.17.09-2.44 0 0 .78-.25 2.55.94a8.8 8.8 0 014.64 0c1.77-1.19 2.54-.94 2.54-.94.51 1.27.19 2.21.1 2.44.59.64.94 1.47.94 2.47 0 3.54-2.15 4.31-4.21 4.54.33.29.63.85.63 1.72v2.55c0 .24.17.53.64.44A9.2 9.2 0 0012 2.8z" fill="currentColor" stroke="none" /></symbol>
+    <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4.8" y="10.5" width="14.4" height="9.5" rx="3" /><path d="M8.4 10.5V8a3.6 3.6 0 017.2 0v2.5" /></symbol>
+    <symbol id="i-wand" viewBox="0 0 24 24"><path d="M4.5 19.5l10-10M14.5 4.5l1 2.6 2.6 1-2.6 1-1 2.6-1-2.6-2.6-1 2.6-1zM19 15l.6 1.5 1.5.6-1.5.6-.6 1.5-.6-1.5-1.5-.6 1.5-.6z" /></symbol>
+  </svg>
+
+  <!-- ==================================================================
+       1. 顶部导航栏（吸顶 + 毛玻璃 + 深色模式 + 移动端汉堡菜单）
+       ================================================================== -->
+  <header class="nav" id="nav">
+    <div class="container nav__inner">
+      <a class="nav__brand" href="#hero" aria-label="奶龙取图 首页">
+        <span class="nav__logo" aria-hidden="true">
+          <svg class="dragon" viewBox="0 0 64 64"><use href="#dragon" /></svg>
+        </span>
+        <span class="nav__brand-text">
+          <strong>奶龙取图</strong>
+          <em>DragonGrab</em>
+        </span>
+      </a>
+
+      <nav class="nav__menu" id="navMenu" aria-label="主导航">
+        <a class="nav__link" href="#about">产品介绍</a>
+        <a class="nav__link" href="#features">核心功能</a>
+        <a class="nav__link" href="#install">安装步骤</a>
+        <a class="nav__link nav__link--cta" href="#download">下载插件</a>
+      </nav>
+
+      <div class="nav__actions">
+        <button class="icon-btn" id="themeToggle" type="button" aria-label="切换深色模式" aria-pressed="false">
+          <svg class="icon icon--sun" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-sun" /></svg>
+          <svg class="icon icon--moon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-moon" /></svg>
+        </button>
+        <button class="icon-btn nav__burger" id="menuToggle" type="button"
+                aria-label="打开菜单" aria-expanded="false" aria-controls="navMenu">
+          <svg class="icon icon--menu" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-menu" /></svg>
+          <svg class="icon icon--close" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-close" /></svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- ==================================================================
+         2. Hero 首屏：主标题 + 双按钮 + 奶龙插画 + 界面模拟
+         ================================================================== -->
+    <section class="hero" id="hero">
+      <!-- 背景光斑与漂浮小奶龙（纯装饰） -->
+      <div class="hero__bg" aria-hidden="true">
+        <span class="blob blob--1"></span>
+        <span class="blob blob--2"></span>
+        <span class="blob blob--3"></span>
+        <span class="float-dragon float-dragon--1"><svg viewBox="0 0 64 64"><use href="#dragon" /></svg></span>
+        <span class="float-dragon float-dragon--2"><svg viewBox="0 0 64 64"><use href="#dragon" /></svg></span>
+        <span class="float-dragon float-dragon--3"><svg viewBox="0 0 64 64"><use href="#dragon" /></svg></span>
+        <span class="float-dragon float-dragon--4"><svg viewBox="0 0 64 64"><use href="#dragon-face" /></svg></span>
+      </div>
+
+      <div class="container hero__inner">
+        <div class="hero__copy reveal">
+          <p class="hero__badge">
+            <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand" /></svg>
+            Chrome 插件 · 完全免费 · 无需注册
+          </p>
+          <h1 class="hero__title">嗷！一键提取<br />电商详情页所有图片</h1>
+          <p class="hero__subtitle">
+            奶龙帮你批量下载 PNG，支持淘宝、天猫、京东、拼多多商家版，免费即用，装完就能用。
+          </p>
+          <div class="hero__actions">
+            <a class="btn btn--primary btn--lg" href="#download">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-download" /></svg>
+              立即安装
+            </a>
+            <a class="btn btn--outline btn--lg" href="#features">查看功能</a>
+          </div>
+          <ul class="hero__meta">
+            <li><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check" /></svg>兼容懒加载</li>
+            <li><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check" /></svg>自动过滤小图</li>
+            <li><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check" /></svg>支持 ZIP 打包</li>
+          </ul>
+        </div>
+
+        <!-- 右侧：奶龙吉祥物 + 插件按钮 + 画廊界面模拟 -->
+        <div class="hero__visual reveal" style="--delay: 120ms">
+          <div class="mock" aria-hidden="true">
+            <div class="mock__bar">
+              <span class="mock__dot"></span><span class="mock__dot"></span><span class="mock__dot"></span>
+              <span class="mock__url">item.taobao.com/item.htm</span>
+            </div>
+            <div class="mock__page">
+              <div class="mock__side">
+                <span class="mock__line mock__line--title"></span>
+                <span class="mock__line"></span>
+                <span class="mock__line mock__line--short"></span>
+                <div class="mock__tiles">
+                  <span class="mock__tile"></span><span class="mock__tile"></span>
+                  <span class="mock__tile"></span><span class="mock__tile"></span>
+                </div>
+              </div>
+              <div class="mock__gallery">
+                <span class="mock__shot mock__shot--a"></span>
+                <span class="mock__shot mock__shot--b"></span>
+                <span class="mock__shot mock__shot--c"></span>
+                <span class="mock__shot mock__shot--d"></span>
+                <p class="mock__toast">嗷！找到 12 张图啦</p>
+              </div>
+            </div>
+            <!-- 模拟插件悬浮按钮 -->
+            <span class="mock__fab">
+              <svg class="dragon" viewBox="0 0 64 64"><use href="#dragon" /></svg>
+              奶龙取图
+            </span>
+          </div>
+          <!-- 大奶龙吉祥物 -->
+          <div class="hero__mascot">
+            <svg viewBox="0 0 64 64"><use href="#dragon" /></svg>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================================================================
+         3. 数据展示区（进入视口时数字增长动画）
+         ================================================================== -->
+    <section class="stats" id="stats">
+      <div class="container stats__grid">
+        <div class="stat reveal">
+          <p class="stat__num" data-count="10000" data-suffix="+" data-format="comma">0</p>
+          <p class="stat__label">已服务用户</p>
+        </div>
+        <div class="stat reveal" style="--delay: 100ms">
+          <p class="stat__num" data-count="500" data-suffix="万+">0</p>
+          <p class="stat__label">累计提取图片</p>
+        </div>
+        <div class="stat reveal" style="--delay: 200ms">
+          <p class="stat__num" data-count="3" data-suffix="大电商">0</p>
+          <p class="stat__label">支持平台</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================================================================
+         4. 在线演示区（纯 CSS 动画，5 秒循环一次）
+         ================================================================== -->
+    <section class="demo" id="demo">
+      <div class="container demo__inner">
+        <div class="demo__copy reveal">
+          <h2 class="section__title">一键操作，无需复杂设置</h2>
+          <p class="section__desc">
+            点一下右下角的小奶龙，它就会自动滚动页面把懒加载图片都逼出来，
+            过滤掉图标和占位图，只把真正的商品图叼回图库。
+          </p>
+          <ul class="tick-list">
+            <li><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check" /></svg>无需手动滚动页面</li>
+            <li><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check" /></svg>无需逐个右键保存</li>
+            <li><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check" /></svg>无需手动转格式</li>
+          </ul>
+        </div>
+
+        <!-- 演示舞台：点击 → 图片逐张出现 → 弹出提示，5 秒一轮 -->
+        <div class="demo__stage reveal" id="demoStage" aria-hidden="true">
+          <div class="stage__browser">
+            <div class="mock__bar">
+              <span class="mock__dot"></span><span class="mock__dot"></span><span class="mock__dot"></span>
+              <span class="mock__url">mms.pinduoduo.com/goods</span>
+            </div>
+            <div class="stage__body">
+              <div class="stage__grid">
+                <span class="stage__img" style="--i: 0"></span>
+                <span class="stage__img stage__img--t2" style="--i: 1"></span>
+                <span class="stage__img stage__img--t3" style="--i: 2"></span>
+                <span class="stage__img stage__img--t4" style="--i: 3"></span>
+                <span class="stage__img stage__img--t5" style="--i: 4"></span>
+                <span class="stage__img stage__img--t6" style="--i: 5"></span>
+                <span class="stage__img stage__img--t3" style="--i: 6"></span>
+                <span class="stage__img stage__img--t2" style="--i: 7"></span>
+                <span class="stage__img stage__img--t6" style="--i: 8"></span>
+                <span class="stage__img stage__img--t4" style="--i: 9"></span>
+                <span class="stage__img stage__img--t5" style="--i: 10"></span>
+                <span class="stage__img" style="--i: 11"></span>
+              </div>
+              <span class="stage__fab">
+                <svg class="dragon" viewBox="0 0 64 64"><use href="#dragon" /></svg>
+                奶龙取图
+              </span>
+              <p class="stage__toast">嗷！已提取 12 张图片</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================================================================
+         5. 产品介绍区（三张卡片）
+         ================================================================== -->
+    <section class="about" id="about">
+      <div class="container">
+        <header class="section__head reveal">
+          <h2 class="section__title">你还在一张一张右键保存吗？</h2>
+          <p class="section__desc">奶龙帮你批量搞定电商图片</p>
+        </header>
+
+        <div class="cards cards--3">
+          <article class="card card--feature reveal">
+            <span class="card__icon">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-time" /></svg>
+            </span>
+            <h3 class="card__title">省时</h3>
+            <p class="card__desc">一键提取页面所有商品图，几秒搞定，不用再一张张右键另存为。</p>
+          </article>
+          <article class="card card--feature reveal" style="--delay: 100ms">
+            <span class="card__icon">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-filter" /></svg>
+            </span>
+            <h3 class="card__title">高效</h3>
+            <p class="card__desc">自动过滤图标、logo、占位图和小图，只留下能用的商品图。</p>
+          </article>
+          <article class="card card--feature reveal" style="--delay: 200ms">
+            <span class="card__icon">
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-lock" /></svg>
+            </span>
+            <h3 class="card__title">免费</h3>
+            <p class="card__desc">完全免费，无隐藏收费，图片只在你的浏览器里处理，不上传服务器。</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================================================================
+         6. 对比表格区
+         ================================================================== -->
+    <section class="compare" id="compare">
+      <div class="container">
+        <header class="section__head reveal">
+          <h2 class="section__title">奶龙取图 vs 手动右键保存</h2>
+          <p class="section__desc">同样的活儿，奶龙一首歌的时间就干完了</p>
+        </header>
+
+        <div class="table-wrap reveal">
+          <table class="table">
+            <caption class="visually-hidden">奶龙取图与手动右键保存的功能对比</caption>
+            <thead>
+              <tr>
+                <th scope="col">功能</th>
+                <th scope="col">手动右键保存</th>
+                <th scope="col" class="table__brand">
+                  <svg class="dragon" viewBox="0 0 64 64" aria-hidden="true"><use href="#dragon" /></svg>
+                  奶龙取图
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row" data-label="功能">批量提取</th>
+                <td data-label="手动右键保存"><span class="mark mark--bad"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-cancel" /></svg>一张一张存</span></td>
+                <td data-label="奶龙取图" class="table__brand"><span class="mark mark--good"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check" /></svg>一键全部提取</span></td>
+              </tr>
+              <tr>
+                <th scope="row" data-label="功能">自动过滤无用图</th>
+                <td data-label="手动右键保存"><span class="mark mark--bad"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-cancel" /></svg>手动筛选</span></td>
+                <td data-label="奶龙取图" class="table__brand"><span class="mark mark--good"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check" /></svg>自动过滤</span></td>
+              </tr>
+              <tr>
+                <th scope="row" data-label="功能">统一格式</th>
+                <td data-label="手动右键保存"><span class="mark mark--bad"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-cancel" /></svg>格式杂乱</span></td>
+                <td data-label="奶龙取图" class="table__brand"><span class="mark mark--good"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check" /></svg>统一 PNG</span></td>
+              </tr>
+              <tr>
+                <th scope="row" data-label="功能">分类整理</th>
+                <td data-label="手动右键保存"><span class="mark mark--bad"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-cancel" /></svg>自己分类</span></td>
+                <td data-label="奶龙取图" class="table__brand"><span class="mark mark--good"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check" /></svg>自动分组</span></td>
+              </tr>
+              <tr>
+                <th scope="row" data-label="功能">ZIP 打包</th>
+                <td data-label="手动右键保存"><span class="mark mark--bad"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-cancel" /></svg>手动压缩</span></td>
+                <td data-label="奶龙取图" class="table__brand"><span class="mark mark--good"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check" /></svg>一键打包</span></td>
+              </tr>
+              <tr>
+                <th scope="row" data-label="功能">导出清单</th>
+                <td data-label="手动右键保存"><span class="mark mark--bad"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-cancel" /></svg>没有</span></td>
+                <td data-label="奶龙取图" class="table__brand"><span class="mark mark--good"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check" /></svg>CSV 导出</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================================================================
+         7. 核心功能展示区（12 张卡片）
+         ================================================================== -->
+    <section class="features" id="features">
+      <div class="container">
+        <header class="section__head reveal">
+          <h2 class="section__title">强大功能，一目了然</h2>
+          <p class="section__desc">12 项能力，覆盖从提取到整理的全流程</p>
+        </header>
+
+        <div class="cards cards--grid">
+          <article class="card card--mini reveal">
+            <span class="card__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-wand" /></svg></span>
+            <h3 class="card__title">一键提取</h3>
+            <p class="card__desc">自动扫描页面所有商品图，兼容各种懒加载属性。</p>
+          </article>
+          <article class="card card--mini reveal" style="--delay: 60ms">
+            <span class="card__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-filter" /></svg></span>
+            <h3 class="card__title">智能过滤</h3>
+            <p class="card__desc">自动排除图标、logo、占位图，只保留商品图。</p>
+          </article>
+          <article class="card card--mini reveal" style="--delay: 120ms">
+            <span class="card__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-grid" /></svg></span>
+            <h3 class="card__title">集中预览</h3>
+            <p class="card__desc">新页面网格展示所有图片，一目了然。</p>
+          </article>
+          <article class="card card--mini reveal" style="--delay: 180ms">
+            <span class="card__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-check" /></svg></span>
+            <h3 class="card__title">自由勾选</h3>
+            <p class="card__desc">全选 / 反选 / 按需下载，想下哪张下哪张。</p>
+          </article>
+          <article class="card card--mini reveal" style="--delay: 240ms">
+            <span class="card__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-image" /></svg></span>
+            <h3 class="card__title">统一 PNG</h3>
+            <p class="card__desc">自动转为 PNG 格式，透明背景也支持。</p>
+          </article>
+          <article class="card card--mini reveal" style="--delay: 300ms">
+            <span class="card__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-download" /></svg></span>
+            <h3 class="card__title">批量下载</h3>
+            <p class="card__desc">一键保存到本地，文件名自动编号。</p>
+          </article>
+          <article class="card card--mini reveal" style="--delay: 60ms">
+            <span class="card__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-expand" /></svg></span>
+            <h3 class="card__title">大图预览</h3>
+            <p class="card__desc">点击放大查看，左右切换不费眼。</p>
+          </article>
+          <article class="card card--mini reveal" style="--delay: 120ms">
+            <span class="card__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-slider" /></svg></span>
+            <h3 class="card__title">尺寸筛选</h3>
+            <p class="card__desc">滑块过滤小图，只看大图。</p>
+          </article>
+          <article class="card card--mini reveal" style="--delay: 180ms">
+            <span class="card__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-zip" /></svg></span>
+            <h3 class="card__title">ZIP 打包</h3>
+            <p class="card__desc">一键打包下载全部，省去逐个保存。</p>
+          </article>
+          <article class="card card--mini reveal" style="--delay: 240ms">
+            <span class="card__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-tags" /></svg></span>
+            <h3 class="card__title">自动分类</h3>
+            <p class="card__desc">主图 / 细节图 / SKU 图自动分组。</p>
+          </article>
+          <article class="card card--mini reveal" style="--delay: 300ms">
+            <span class="card__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-link" /></svg></span>
+            <h3 class="card__title">复制 URL</h3>
+            <p class="card__desc">一键复制图片链接，方便贴到后台。</p>
+          </article>
+          <article class="card card--mini reveal" style="--delay: 360ms">
+            <span class="card__icon"><svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-csv" /></svg></span>
+            <h3 class="card__title">导出 CSV</h3>
+            <p class="card__desc">图片清单一键导出，方便归档对账。</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================================================================
+         8. 安装步骤区（4 步 + 箭头连接）
+         ================================================================== -->
+    <section class="install" id="install">
+      <div class="container">
+        <header class="section__head reveal">
+          <h2 class="section__title">四步安装，嗷一下就用</h2>
+          <p class="section__desc">不用命令行，不用折腾环境，两分钟装完</p>
+        </header>
+
+        <ol class="steps">
+          <li class="step reveal">
+            <span class="step__num">1</span>
+            <h3 class="step__title">下载并解压</h3>
+            <p class="step__desc">下载 <code>dragongrab-v1.1.0.zip</code>，解压到本地任意文件夹（记住这个路径）。</p>
+          </li>
+          <li class="step__arrow" aria-hidden="true">
+            <svg class="icon" viewBox="0 0 24 24"><use href="#i-arrow" /></svg>
+          </li>
+          <li class="step reveal" style="--delay: 100ms">
+            <span class="step__num">2</span>
+            <h3 class="step__title">打开扩展管理页</h3>
+            <p class="step__desc">打开 Chrome，地址栏输入 <code>chrome://extensions</code> 回车。</p>
+          </li>
+          <li class="step__arrow" aria-hidden="true">
+            <svg class="icon" viewBox="0 0 24 24"><use href="#i-arrow" /></svg>
+          </li>
+          <li class="step reveal" style="--delay: 200ms">
+            <span class="step__num">3</span>
+            <h3 class="step__title">开启开发者模式</h3>
+            <p class="step__desc">打开页面右上角的「开发者模式」开关。</p>
+          </li>
+          <li class="step__arrow" aria-hidden="true">
+            <svg class="icon" viewBox="0 0 24 24"><use href="#i-arrow" /></svg>
+          </li>
+          <li class="step reveal" style="--delay: 300ms">
+            <span class="step__num">4</span>
+            <h3 class="step__title">加载扩展程序</h3>
+            <p class="step__desc">点击「加载已解压的扩展程序」，选中解压出来的 <code>dragongrab</code> 文件夹（里面直接有 <code>manifest.json</code> 的那一层）。</p>
+          </li>
+        </ol>
+      </div>
+    </section>
+
+    <!-- ==================================================================
+         9. 用户评价区
+         ================================================================== -->
+    <section class="reviews" id="reviews">
+      <div class="container">
+        <header class="section__head reveal">
+          <h2 class="section__title">龙友们怎么说</h2>
+          <p class="section__desc">已经有 10,000+ 位电商从业者把奶龙留在浏览器里</p>
+        </header>
+
+        <div class="cards cards--3">
+          <figure class="card card--review reveal">
+            <div class="review__stars" role="img" aria-label="5 星好评">
+              <svg class="icon" viewBox="0 0 24 24"><use href="#i-star" /></svg>
+              <svg class="icon" viewBox="0 0 24 24"><use href="#i-star" /></svg>
+              <svg class="icon" viewBox="0 0 24 24"><use href="#i-star" /></svg>
+              <svg class="icon" viewBox="0 0 24 24"><use href="#i-star" /></svg>
+              <svg class="icon" viewBox="0 0 24 24"><use href="#i-star" /></svg>
+            </div>
+            <blockquote class="review__text">
+              「上架新品要整理三十多张主图，以前得点半小时。现在奶龙一按，图库直接排好，
+              勾选打包 ZIP，五分钟交差，嗷！」
+            </blockquote>
+            <figcaption class="review__user">
+              <span class="review__avatar"><svg viewBox="0 0 64 64" aria-hidden="true"><use href="#dragon-face" /></svg></span>
+              <span class="review__info"><strong>小柚子</strong><em>电商运营 · 天猫店</em></span>
+            </figcaption>
+          </figure>
+
+          <figure class="card card--review reveal" style="--delay: 100ms">
+            <div class="review__stars" role="img" aria-label="5 星好评">
+              <svg class="icon" viewBox="0 0 24 24"><use href="#i-star" /></svg>
+              <svg class="icon" viewBox="0 0 24 24"><use href="#i-star" /></svg>
+              <svg class="icon" viewBox="0 0 24 24"><use href="#i-star" /></svg>
+              <svg class="icon" viewBox="0 0 24 24"><use href="#i-star" /></svg>
+              <svg class="icon" viewBox="0 0 24 24"><use href="#i-star" /></svg>
+            </div>
+            <blockquote class="review__text">
+              「做竞品视觉分析要收集大量详情页素材，奶龙的尺寸筛选和分类分组太好用了，
+              直接按主图 / 细节图分批下载。」
+            </blockquote>
+            <figcaption class="review__user">
+              <span class="review__avatar"><svg viewBox="0 0 64 64" aria-hidden="true"><use href="#dragon-face" /></svg></span>
+              <span class="review__info"><strong>阿澈</strong><em>UI 设计师</em></span>
+            </figcaption>
+          </figure>
+
+          <figure class="card card--review reveal" style="--delay: 200ms">
+            <div class="review__stars" role="img" aria-label="5 星好评">
+              <svg class="icon" viewBox="0 0 24 24"><use href="#i-star" /></svg>
+              <svg class="icon" viewBox="0 0 24 24"><use href="#i-star" /></svg>
+              <svg class="icon" viewBox="0 0 24 24"><use href="#i-star" /></svg>
+              <svg class="icon" viewBox="0 0 24 24"><use href="#i-star" /></svg>
+              <svg class="icon" viewBox="0 0 24 24"><use href="#i-star" /></svg>
+            </div>
+            <blockquote class="review__text">
+              「代码写得很规矩，MV3 规范的 content script + service worker 分工清晰，
+              转码那段用 OffscreenCanvas 处理得很聪明，学习到了。」
+            </blockquote>
+            <figcaption class="review__user">
+              <span class="review__avatar"><svg viewBox="0 0 64 64" aria-hidden="true"><use href="#dragon-face" /></svg></span>
+              <span class="review__info"><strong>K先生</strong><em>前端开发</em></span>
+            </figcaption>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================================================================
+         10. FAQ 常见问题（手风琴折叠）
+         ================================================================== -->
+    <section class="faq" id="faq">
+      <div class="container">
+        <header class="section__head reveal">
+          <h2 class="section__title">奶龙答疑</h2>
+          <p class="section__desc">点一下问题就能展开，再点一下收起来</p>
+        </header>
+
+        <div class="acc" id="faqAcc">
+          <div class="acc__item reveal">
+            <h3 class="acc__head">
+              <button class="acc__btn" type="button" aria-expanded="false" aria-controls="faq-1" id="faq-1-btn">
+                <span>这个插件收费吗？</span>
+                <svg class="icon acc__chevron" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chevron" /></svg>
+              </button>
+            </h3>
+            <div class="acc__panel" id="faq-1" role="region" aria-labelledby="faq-1-btn">
+              <div class="acc__inner">
+                <p>完全免费，没有会员、没有次数限制、没有隐藏收费。图片全部在你自己的浏览器里处理，不会上传到任何服务器，奶龙只负责在你电脑上干活。</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="acc__item reveal">
+            <h3 class="acc__head">
+              <button class="acc__btn" type="button" aria-expanded="false" aria-controls="faq-2" id="faq-2-btn">
+                <span>支持哪些电商平台？</span>
+                <svg class="icon acc__chevron" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chevron" /></svg>
+              </button>
+            </h3>
+            <div class="acc__panel" id="faq-2" role="region" aria-labelledby="faq-2-btn">
+              <div class="acc__inner">
+                <p>目前支持淘宝、天猫、京东、拼多多商家版的商品详情页。打开对应页面时，右下角会自动出现「奶龙取图」按钮；其他页面不显示，避免打扰你浏览。</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="acc__item reveal">
+            <h3 class="acc__head">
+              <button class="acc__btn" type="button" aria-expanded="false" aria-controls="faq-3" id="faq-3-btn">
+                <span>下载的图片是什么格式？</span>
+                <svg class="icon acc__chevron" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chevron" /></svg>
+              </button>
+            </h3>
+            <div class="acc__panel" id="faq-3" role="region" aria-labelledby="faq-3-btn">
+              <div class="acc__inner">
+                <p>默认统一转成 PNG（无损，透明背景也能保留）。也可以在图库顶部切换成 JPG 或 WebP，并调节画质，体积更小。文件名规则是「前缀_序号.后缀」，例如 <code>奶龙图_001.png</code>。</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="acc__item reveal">
+            <h3 class="acc__head">
+              <button class="acc__btn" type="button" aria-expanded="false" aria-controls="faq-4" id="faq-4-btn">
+                <span>为什么有些图片提取不到？</span>
+                <svg class="icon acc__chevron" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chevron" /></svg>
+              </button>
+            </h3>
+            <div class="acc__panel" id="faq-4" role="region" aria-labelledby="faq-4-btn">
+              <div class="acc__inner">
+                <p>三种常见情况：一是图片在 iframe 里（跨域框架无法读取）；二是图片由 Canvas 动态绘制、没有任何真实地址；三是图片小于 100×100 被当成图标过滤掉了。前两种可以在页面上多滚动几屏再提取，第三种可以在图库里把「最小宽度」滑块拉到 100。</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="acc__item reveal">
+            <h3 class="acc__head">
+              <button class="acc__btn" type="button" aria-expanded="false" aria-controls="faq-5" id="faq-5-btn">
+                <span>提取的图片有版权问题吗？</span>
+                <svg class="icon acc__chevron" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chevron" /></svg>
+              </button>
+            </h3>
+            <div class="acc__panel" id="faq-5" role="region" aria-labelledby="faq-5-btn">
+              <div class="acc__inner">
+                <p>插件只是把页面上公开显示的图片地址收集起来，帮你省下重复劳动，不提供任何图片内容。请把素材用于合法用途：自己店铺的商品图、已获授权的素材，或仅供个人学习分析。商用他人图片前请先取得授权。</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================================================================
+         11. 更新日志（手风琴折叠）
+         ================================================================== -->
+    <section class="changelog" id="changelog">
+      <div class="container">
+        <header class="section__head reveal">
+          <h2 class="section__title">更新日志</h2>
+          <p class="section__desc">奶龙一直在长个子</p>
+        </header>
+
+        <div class="acc acc--log" id="logAcc">
+          <div class="acc__item reveal">
+            <h3 class="acc__head">
+              <button class="acc__btn" type="button" aria-expanded="false" aria-controls="log-1" id="log-1-btn">
+                <span class="acc__version"><b>v1.1.0</b><time datetime="2026-09-18">2026-09-18</time></span>
+                <svg class="icon acc__chevron" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chevron" /></svg>
+              </button>
+            </h3>
+            <div class="acc__panel" id="log-1" role="region" aria-labelledby="log-1-btn">
+              <div class="acc__inner">
+                <ul class="log-list">
+                  <li>新增图片自动分类：主图 / 细节图 / SKU 图自动分组，标签一键筛选</li>
+                  <li>新增 CSV 清单导出，方便归档和对账</li>
+                  <li>新增深色模式与 Alt + S 快捷提取</li>
+                  <li>新增相似图合并，同图不同尺寸只留一张</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div class="acc__item reveal">
+            <h3 class="acc__head">
+              <button class="acc__btn" type="button" aria-expanded="false" aria-controls="log-2" id="log-2-btn">
+                <span class="acc__version"><b>v1.0.1</b><time datetime="2026-08-02">2026-08-02</time></span>
+                <svg class="icon acc__chevron" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chevron" /></svg>
+              </button>
+            </h3>
+            <div class="acc__panel" id="log-2" role="region" aria-labelledby="log-2-btn">
+              <div class="acc__inner">
+                <ul class="log-list">
+                  <li>修复京东详情页部分懒加载图片提取不到的 bug</li>
+                  <li>优化图片过滤逻辑，减少把商品细节图误判为小图的情况</li>
+                  <li>图库加载失败的图片改为显示奶龙占位图，不再白屏</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+
+          <div class="acc__item reveal">
+            <h3 class="acc__head">
+              <button class="acc__btn" type="button" aria-expanded="false" aria-controls="log-3" id="log-3-btn">
+                <span class="acc__version"><b>v1.0.0</b><time datetime="2026-07-10">2026-07-10</time></span>
+                <svg class="icon acc__chevron" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chevron" /></svg>
+              </button>
+            </h3>
+            <div class="acc__panel" id="log-3" role="region" aria-labelledby="log-3-btn">
+              <div class="acc__inner">
+                <ul class="log-list">
+                  <li>首次发布：详情页悬浮按钮 + 一键提取所有商品图</li>
+                  <li>图库网格预览、勾选下载、统一转 PNG</li>
+                  <li>支持淘宝、天猫、京东、拼多多商家版</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ==================================================================
+         12a. 底部 CTA（黄色渐变区块）
+         ================================================================== -->
+    <section class="cta" id="download">
+      <div class="container cta__inner reveal">
+        <div class="cta__copy">
+          <h2 class="cta__title">把奶龙装进浏览器，今天就不用点右键了</h2>
+          <p class="cta__desc">免费、无广告、不上传数据。装好之后打开商品详情页，右下角就是奶龙。</p>
+          <div class="cta__actions">
+            <a class="btn btn--dark btn--lg" href="download/dragongrab-v1.1.0.zip" id="downloadBtn" download>
+              <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-download" /></svg>
+              下载插件
+            </a>
+            <a class="btn btn--ghost btn--lg" href="#install">先看安装步骤</a>
+          </div>
+          <p class="cta__note">当前版本 v1.1.0 · 兼容 Chrome 102 及以上 · 压缩包约 57 KB</p>
+        </div>
+        <div class="cta__mascot" aria-hidden="true">
+          <svg viewBox="0 0 64 64"><use href="#dragon" /></svg>
+          <span class="float-dragon float-dragon--5"><svg viewBox="0 0 64 64"><use href="#dragon-face" /></svg></span>
+          <span class="float-dragon float-dragon--6"><svg viewBox="0 0 64 64"><use href="#dragon-face" /></svg></span>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ==================================================================
+       12b. Footer
+       ================================================================== -->
+  <footer class="footer">
+    <div class="container footer__inner">
+      <div class="footer__brand">
+        <span class="nav__logo" aria-hidden="true">
+          <svg class="dragon" viewBox="0 0 64 64"><use href="#dragon" /></svg>
+        </span>
+        <div>
+          <p class="footer__name">奶龙取图 <span>DragonGrab</span></p>
+          <p class="footer__slogan">嗷！帮你把商品图都叼回来</p>
+        </div>
+      </div>
+
+      <nav class="footer__links" aria-label="页脚导航">
+        <a href="#about">产品介绍</a>
+        <a href="#features">核心功能</a>
+        <a href="#install">安装步骤</a>
+        <a href="#faq">常见问题</a>
+        <a href="#" class="footer__gh" title="GitHub 仓库占位链接">
+          <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-github" /></svg>
+          GitHub
+        </a>
+      </nav>
+
+      <p class="footer__platforms">支持平台：淘宝 · 天猫 · 京东 · 拼多多商家版</p>
+      <p class="footer__copy">© 2026 奶龙取图 DragonGrab · 本插件仅供学习与合法的图片整理使用</p>
+    </div>
+  </footer>
+
+  <!-- 回到顶部 -->
+  <button class="to-top" id="toTop" type="button" aria-label="回到顶部">
+    <svg class="icon" viewBox="0 0 24 24" aria-hidden="true"><use href="#i-chevron" /></svg>
+  </button>
+
+  <script src="js/main.js" defer></script>
+</body>
+</html>

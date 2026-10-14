@@ -1,0 +1,180 @@
+/* ==========================================================================
+   奶龙取图 / DragonGrab - 内容脚本样式（黄色奶龙主题）
+   说明：注入到电商页面的样式，全部使用 dg- 前缀避免与宿主页面冲突。
+   关键布局属性加 !important，防止被电商页面的全局样式覆盖。
+   ========================================================================== */
+
+/* ---------- 悬浮主按钮（胶囊形） ---------- */
+#dg-fab {
+  position: fixed !important;
+  right: 20px !important;
+  bottom: 20px !important;
+  left: auto !important;
+  top: auto !important;
+  z-index: 999999 !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  box-sizing: border-box !important;
+  margin: 0 !important;
+  padding: 10px 18px 10px 12px !important;
+  border: 2px solid #ffb300 !important;
+  border-radius: 20px !important;
+  background: linear-gradient(135deg, #ffd54f 0%, #ffca28 55%, #ffb300 100%) !important;
+  box-shadow: 0 6px 18px rgba(255, 179, 0, 0.45), 0 2px 6px rgba(122, 75, 0, 0.18) !important;
+  color: #5a3a00 !important;
+  font-family: "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", "Helvetica Neue", Arial, sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+  letter-spacing: 0.5px !important;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5) !important;
+  cursor: pointer !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  transform: translateZ(0) scale(1) !important;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease !important;
+  opacity: 0;
+  animation: dg-fab-in 0.32s ease forwards;
+}
+
+/* 入场动画：从右下角弹出来 */
+@keyframes dg-fab-in {
+  from { opacity: 0; transform: translateY(14px) scale(0.86); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+#dg-fab:hover {
+  transform: translateZ(0) scale(1.06) !important;
+  box-shadow: 0 10px 24px rgba(255, 179, 0, 0.55), 0 3px 8px rgba(122, 75, 0, 0.22) !important;
+}
+
+#dg-fab:active {
+  transform: translateZ(0) scale(0.96) !important;
+}
+
+#dg-fab.dg-dragging {
+  cursor: grabbing !important;
+  transform: translateZ(0) scale(1.04) !important;
+  transition: none !important;
+}
+
+/* 提取中：禁止重复点击 + 轻微降透明度 */
+#dg-fab.dg-busy {
+  cursor: progress !important;
+  pointer-events: none !important;
+  opacity: 0.92 !important;
+}
+
+/* ---------- 按钮里的小奶龙图标 ---------- */
+#dg-fab .dg-fab-icon {
+  position: relative !important;
+  display: block !important;
+  flex: 0 0 auto !important;
+  width: 30px !important;
+  height: 30px !important;
+  line-height: 0 !important;
+  transform-origin: 50% 60% !important;
+}
+
+#dg-fab .dg-fab-icon svg {
+  display: block !important;
+  width: 100% !important;
+  height: 100% !important;
+  overflow: visible !important;
+}
+
+/* 提取中：小奶龙转圈 */
+#dg-fab.dg-busy .dg-fab-icon {
+  animation: dg-dragon-spin 1s linear infinite !important;
+}
+
+@keyframes dg-dragon-spin {
+  0%   { transform: rotate(0deg) scale(1); }
+  50%  { transform: rotate(180deg) scale(1.12); }
+  100% { transform: rotate(360deg) scale(1); }
+}
+
+/* 提取中：按钮下方出现一条流动的黄色进度线 */
+#dg-fab.dg-busy::after {
+  content: "" !important;
+  position: absolute !important;
+  left: 12px !important;
+  right: 12px !important;
+  bottom: 5px !important;
+  height: 3px !important;
+  border-radius: 3px !important;
+  background: linear-gradient(90deg, rgba(90, 58, 0, 0.05), rgba(90, 58, 0, 0.55), rgba(90, 58, 0, 0.05)) !important;
+  background-size: 200% 100% !important;
+  animation: dg-line-move 0.9s linear infinite !important;
+}
+
+@keyframes dg-line-move {
+  from { background-position: 100% 0; }
+  to   { background-position: -100% 0; }
+}
+
+/* ---------- 页面内提示气泡（Toast） ---------- */
+#dg-toast-wrap {
+  position: fixed !important;
+  right: 20px !important;
+  bottom: 78px !important;
+  z-index: 1000000 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: flex-end !important;
+  gap: 10px !important;
+  pointer-events: none !important;
+  font-family: "PingFang SC", "Microsoft YaHei", "Hiragino Sans GB", Arial, sans-serif !important;
+}
+
+#dg-toast-wrap .dg-toast {
+  box-sizing: border-box !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 8px !important;
+  max-width: 300px !important;
+  padding: 10px 14px !important;
+  border: 2px solid #ffca28 !important;
+  border-radius: 16px !important;
+  background: linear-gradient(135deg, #fffdf5 0%, #fff6d8 100%) !important;
+  box-shadow: 0 8px 22px rgba(255, 179, 0, 0.35) !important;
+  color: #5a3a00 !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  line-height: 1.5 !important;
+  text-align: left !important;
+  opacity: 0;
+  transform: translateX(20px);
+  animation: dg-toast-in 0.24s ease forwards;
+}
+
+#dg-toast-wrap .dg-toast.dg-toast-out {
+  animation: dg-toast-out 0.24s ease forwards;
+}
+
+#dg-toast-wrap .dg-toast.dg-toast-error {
+  border-color: #ff8a65 !important;
+  background: linear-gradient(135deg, #fff6f3 0%, #ffe6de 100%) !important;
+  color: #8a3b12 !important;
+}
+
+#dg-toast-wrap .dg-toast-emoji {
+  flex: 0 0 auto !important;
+  font-size: 16px !important;
+  line-height: 1 !important;
+}
+
+@keyframes dg-toast-in {
+  to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes dg-toast-out {
+  to { opacity: 0; transform: translateX(24px) scale(0.96); }
+}
+
+/* ---------- 悬浮按钮被拖拽后的位置由内联 style 控制 ---------- */
+#dg-fab.dg-dragged {
+  right: auto !important;
+  bottom: auto !important;
+}

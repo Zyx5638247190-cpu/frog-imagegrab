@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>奶龙取图 / DragonGrab</title>
+  <link rel="stylesheet" href="gallery.css" />
+</head>
+<body>
+  <!-- ======================= 顶部标题栏 ======================= -->
+  <header class="dg-header">
+    <div class="dg-brand">
+      <span class="dg-logo">
+        <!-- 黄色奶龙 Logo（纯 SVG 绘制） -->
+        <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <defs>
+            <linearGradient id="dgLogoGrad" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#FFE082" />
+              <stop offset="1" stop-color="#FFB300" />
+            </linearGradient>
+          </defs>
+          <path d="M13 47 C3 47 5 34 14 35" fill="none" stroke="#FFB300" stroke-width="5" stroke-linecap="round" />
+          <path d="M22 17 L19.5 8 L28 13.5 Z" fill="#FF8F00" />
+          <path d="M42 17 L44.5 8 L36 13.5 Z" fill="#FF8F00" />
+          <ellipse cx="32" cy="36" rx="22" ry="20" fill="url(#dgLogoGrad)" stroke="#F9A825" stroke-width="2" />
+          <ellipse cx="32" cy="45" rx="13" ry="9.5" fill="#FFF8E1" opacity="0.9" />
+          <ellipse cx="24" cy="30" rx="5.6" ry="6.2" fill="#FFFFFF" />
+          <ellipse cx="41" cy="30" rx="5.6" ry="6.2" fill="#FFFFFF" />
+          <circle cx="25" cy="31" r="3.1" fill="#4E342E" />
+          <circle cx="42" cy="31" r="3.1" fill="#4E342E" />
+          <circle cx="26.2" cy="29.4" r="1.1" fill="#FFFFFF" />
+          <circle cx="43.2" cy="29.4" r="1.1" fill="#FFFFFF" />
+          <ellipse cx="15" cy="39" rx="4" ry="2.6" fill="#FFAB91" opacity="0.75" />
+          <ellipse cx="49" cy="39" rx="4" ry="2.6" fill="#FFAB91" opacity="0.75" />
+          <path d="M28 40.5 Q32.5 45 37 40.5" fill="none" stroke="#6D4C41" stroke-width="2" stroke-linecap="round" />
+        </svg>
+      </span>
+      <div class="dg-brand-text">
+        <h1>奶龙取图 <span>DragonGrab</span></h1>
+        <p id="dg-subtitle">嗷！奶龙帮你把商品图都叼回来～</p>
+      </div>
+    </div>
+    <div class="dg-header-actions">
+      <button type="button" class="dg-btn dg-btn-ghost" id="dg-rescan" title="重新读取最近一次提取的结果">🔄 刷新列表</button>
+      <button type="button" class="dg-btn dg-btn-ghost" id="dg-dark-toggle" title="切换深色 / 浅色主题">🌙 深色模式</button>
+      <button type="button" class="dg-btn dg-btn-ghost" id="dg-clear" title="清空当前列表与历史记录">🧹 清空</button>
+    </div>
+  </header>
+
+  <!-- ======================= 工具栏 ======================= -->
+  <section class="dg-toolbar">
+    <div class="dg-toolbar-row">
+      <div class="dg-tool-group">
+        <button type="button" class="dg-btn dg-btn-soft" id="dg-select-all">☑️ 全选</button>
+        <button type="button" class="dg-btn dg-btn-soft" id="dg-invert">🔀 反选</button>
+        <button type="button" class="dg-btn dg-btn-soft" id="dg-select-none">⬜ 全不选</button>
+      </div>
+
+      <label class="dg-field">
+        <span class="dg-field-label">文件名前缀</span>
+        <input type="text" id="dg-prefix" value="奶龙图_" placeholder="奶龙图_" maxlength="40" />
+      </label>
+
+      <label class="dg-field">
+        <span class="dg-field-label">保存格式</span>
+        <select id="dg-format">
+          <option value="png">PNG（无损 · 默认）</option>
+          <option value="jpg">JPG（体积小）</option>
+          <option value="webp">WebP（最小）</option>
+        </select>
+      </label>
+
+      <label class="dg-field" id="dg-quality-field" hidden>
+        <span class="dg-field-label">画质 <b id="dg-quality-value">92%</b></span>
+        <input type="range" id="dg-quality" min="40" max="100" step="1" value="92" />
+      </label>
+
+      <div class="dg-tool-group dg-tool-group-right">
+        <span class="dg-count-badge" id="dg-selected-count">已选 0 / 0</span>
+        <button type="button" class="dg-btn dg-btn-primary" id="dg-download-selected">⬇️ 下载选中</button>
+        <button type="button" class="dg-btn dg-btn-primary" id="dg-download-zip">🗜️ 打包下载全部</button>
+        <button type="button" class="dg-btn dg-btn-soft" id="dg-export-csv">📄 导出CSV</button>
+      </div>
+    </div>
+
+    <div class="dg-toolbar-row dg-toolbar-row-2">
+      <div class="dg-tool-group" id="dg-category-tabs">
+        <!-- 分类标签由 JS 渲染：全部 / 主图 / 细节图 / SKU图 -->
+      </div>
+
+      <label class="dg-field dg-field-slider">
+        <span class="dg-field-label">最小宽度 <b id="dg-minwidth-value">100</b> px</span>
+        <input type="range" id="dg-minwidth" min="100" max="1000" step="10" value="100" />
+      </label>
+
+      <div class="dg-tool-group">
+        <button type="button" class="dg-btn dg-btn-soft" id="dg-merge-similar" title="用感知哈希把同一张图的轻微裁剪 / 不同尺寸版本合并显示">
+          🧬 相似图合并 <b id="dg-merge-count">0</b>
+        </button>
+        <button type="button" class="dg-btn dg-btn-soft" id="dg-sort-size" title="按像素面积从大到小排序">📐 按尺寸排序</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ======================= 进度条 ======================= -->
+  <div class="dg-progress" id="dg-progress-wrap" hidden>
+    <div class="dg-progress-head">
+      <span class="dg-progress-text" id="dg-progress-text">准备中…</span>
+      <span class="dg-progress-percent" id="dg-progress-percent">0%</span>
+    </div>
+    <div class="dg-progress-track"><div class="dg-progress-bar" id="dg-progress-bar"></div></div>
+  </div>
+
+  <!-- ======================= 图片网格 ======================= -->
+  <main class="dg-main">
+    <section class="dg-grid" id="dg-grid" aria-live="polite"></section>
+
+    <div class="dg-empty" id="dg-empty">
+      <div class="dg-empty-dragon">
+        <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <ellipse cx="32" cy="36" rx="22" ry="20" fill="#FFE082" stroke="#F9A825" stroke-width="2" />
+          <ellipse cx="24" cy="30" rx="5.6" ry="6.2" fill="#FFFFFF" />
+          <ellipse cx="41" cy="30" rx="5.6" ry="6.2" fill="#FFFFFF" />
+          <path d="M22 31 h5" stroke="#4E342E" stroke-width="2.4" stroke-linecap="round" />
+          <path d="M39 31 h5" stroke="#4E342E" stroke-width="2.4" stroke-linecap="round" />
+          <path d="M28 43 Q32.5 38.5 37 43" fill="none" stroke="#6D4C41" stroke-width="2" stroke-linecap="round" />
+        </svg>
+      </div>
+      <h2>嗷呜…还没有图片哦</h2>
+      <p>去淘宝 / 天猫 / 京东 / 拼多多商家版的商品详情页，点右下角的「奶龙取图」按钮，或者按 <kbd>Alt</kbd> + <kbd>S</kbd>。</p>
+    </div>
+  </main>
+
+  <!-- ======================= 底部历史记录 ======================= -->
+  <footer class="dg-footer" id="dg-footer">
+    <span class="dg-footer-dragon">🐲</span>
+    <span id="dg-history-text">奶龙还没有搬过图哦～</span>
+  </footer>
+
+  <!-- ======================= 大图预览遮罩层 ======================= -->
+  <div class="dg-lightbox" id="dg-lightbox" hidden>
+    <div class="dg-lightbox-mask" id="dg-lightbox-mask"></div>
+    <div class="dg-lightbox-panel">
+      <header class="dg-lightbox-head">
+        <span class="dg-lightbox-logo">
+          <svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <ellipse cx="32" cy="36" rx="22" ry="20" fill="#FFCA28" stroke="#F9A825" stroke-width="2" />
+            <ellipse cx="24" cy="30" rx="5.6" ry="6.2" fill="#FFFFFF" />
+            <ellipse cx="41" cy="30" rx="5.6" ry="6.2" fill="#FFFFFF" />
+            <circle cx="25" cy="31" r="3.1" fill="#4E342E" />
+            <circle cx="42" cy="31" r="3.1" fill="#4E342E" />
+            <path d="M28 40.5 Q32.5 45 37 40.5" fill="none" stroke="#6D4C41" stroke-width="2" stroke-linecap="round" />
+          </svg>
+        </span>
+        <strong>奶龙取图 · 大图预览</strong>
+        <button type="button" class="dg-btn dg-btn-ghost dg-lightbox-close" id="dg-lightbox-close">✕ 关闭</button>
+      </header>
+
+      <div class="dg-lightbox-body">
+        <button type="button" class="dg-lightbox-nav dg-lightbox-prev" id="dg-lightbox-prev" title="上一张（←）">‹</button>
+        <div class="dg-lightbox-stage">
+          <img id="dg-lightbox-img" alt="预览图" />
+          <div class="dg-lightbox-loading" id="dg-lightbox-loading">奶龙正在叼图…</div>
+        </div>
+        <button type="button" class="dg-lightbox-nav dg-lightbox-next" id="dg-lightbox-next" title="下一张（→）">›</button>
+      </div>
+
+      <footer class="dg-lightbox-foot">
+        <span id="dg-lightbox-meta">—</span>
+        <span class="dg-lightbox-tip">← → 切换 · ESC 关闭 · 点击遮罩关闭</span>
+      </footer>
+    </div>
+  </div>
+
+  <!-- ======================= 悬停 2 倍放大预览 ======================= -->
+  <div class="dg-hover-preview" id="dg-hover-preview" hidden>
+    <img id="dg-hover-preview-img" alt="悬浮预览" />
+    <div class="dg-hover-preview-meta" id="dg-hover-preview-meta"></div>
+  </div>
+
+  <!-- ======================= 轻提示 ======================= -->
+  <div class="dg-toast-wrap" id="dg-toast-wrap"></div>
+
+  <script src="gallery.js"></script>
+</body>
+</html>
